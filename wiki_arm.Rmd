@@ -1,0 +1,80 @@
+load packages
+```{r}
+library(viridis)
+library(arules)
+library(TSP)
+library(data.table)
+library(ggplot2)
+library(Matrix)
+library(dplyr)
+library(devtools)
+library(purrr)
+library(tidyr)
+library(arulesViz)
+library(RColorBrewer)
+library(tm)
+library(arules)
+
+## DO THIS ONCE
+## FIRST - you MUST register and log into github
+#install_github("mhahsler/arulesViz")
+#RE: https://github.com/mhahsler/arulesViz
+```
+
+read in files 
+```{r}
+# Load transaction data (update the filename as needed)
+data <- read.transactions("/Users/willweiwu/wiki_transactions.csv",
+                                  rm.duplicates = FALSE,
+                                  format = "basket",
+                                  sep = ",",
+                                  cols = NULL)
+
+# Inspect a sample of the data
+arules::inspect(data[1:10])
+```
+
+Plot of which items are most frequent
+```{r}
+arules::itemFrequencyPlot(data, topN = 20,
+                          col = brewer.pal(8, 'Pastel2'),
+                          main = 'Relative Item Frequency Plot',
+                          type = "relative",
+                          ylab = "Item Frequency (Relative)")
+```
+
+Use apriori to get the RULES
+```{r}
+Frules = arules::apriori(data, parameter = list(support=.35, 
+                                                 confidence=.35, minlen=2))
+
+arules::inspect(Frules)
+```
+
+Sorting rules 
+```{r}
+SortedRules <- sort(Frules, by="confidence", decreasing=TRUE)
+arules::inspect(SortedRules[1:15])
+(summary(SortedRules))
+
+SortedRulesL <- sort(Frules, by="lift", decreasing=TRUE)
+arules::inspect(SortedRulesL[1:15])
+(summary(SortedRulesL))
+
+SortedRulesS <- sort(Frules, by="support", decreasing=TRUE)
+arules::inspect(SortedRulesS[1:15])
+(summary(SortedRulesS))
+```
+
+Visualize
+```{r}
+library(arulesViz)
+subrules_lift <- head(SortedRulesL, 15)
+plot(subrules_lift, method = "graph", engine = "htmlwidget")
+
+subrules_conf <- head(SortedRules, 15)
+plot(subrules_conf, method = "graph", engine = "htmlwidget")
+
+subrules_supp <- head(SortedRulesS, 15)
+plot(subrules_conf, method = "graph", engine = "htmlwidget")
+```

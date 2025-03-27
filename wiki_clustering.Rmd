@@ -1,0 +1,127 @@
+Load necessary packages
+```{r}
+library(tm) #stands for text mining 
+#install.packages("tm")
+library(stringr)
+library(wordcloud)
+# ONCE: install.packages("Snowball")
+## NOTE Snowball is not yet available for R v 3.5.x
+## So I cannot use it  - yet...
+##library("Snowball")
+##set working directory
+## ONCE: install.packages("slam")
+library(slam)
+library(quanteda)
+## ONCE: install.packages("quanteda")
+## Note - this includes SnowballC
+library(SnowballC)
+library(arules)
+##ONCE: install.packages('proxy')
+library(proxy)
+library(cluster)
+library(stringi)
+library(proxy)
+library(Matrix)
+library(tidytext) # convert DTM to DF
+library(plyr) ## for adply
+library(ggplot2)
+library(factoextra) # for fviz
+library(mclust) # for Mclust EM clustering
+library(textstem)  ## Needed for lemmatize_strings
+library(amap)  ## for Kmeans
+library(networkD3)
+```
+
+Load and prep data
+```{r}
+data <- read.csv('/Users/willweiwu/Library/CloudStorage/Dropbox/CU Boulder/2025 Spring/INFO 5653-001 Text Mining/Project/wiki/vectorized_data_wiki.csv')
+
+data <- data[, -which(names(data) == "sentiment")]
+
+data_matrix <- as.matrix(data)
+```
+K means clustering (with 2 clusters)
+```{r}
+kmeansFIT_1 <- kmeans(data_matrix, centers = 2, nstart = 4)
+print("Kmeans details:")
+summary(kmeansFIT_1)
+print("Cluster centers:")
+print(kmeansFIT_1$centers)
+
+#visualization 
+fviz_cluster(kmeansFIT_1, data_matrix, main = "K-means Clustering with 2 Centers")
+
+kmeansFIT_2 <- kmeans(data_matrix, centers = 3, nstart = 4)
+print("Kmeans details:")
+summary(kmeansFIT_2)
+print("Cluster centers:")
+print(kmeansFIT_2$centers)
+
+#visualization 
+fviz_cluster(kmeansFIT_2, data_matrix, main = "K-means Clustering with 3 Centers")
+
+kmeansFIT_3 <- kmeans(data_matrix, centers = 4, nstart = 4)
+print("Kmeans details:")
+summary(kmeansFIT_3)
+print("Cluster centers:")
+print(kmeansFIT_3$centers)
+
+#visualization 
+fviz_cluster(kmeansFIT_3, data_matrix, main = "K-means Clustering with 4 Centers")
+```
+
+Top words in each cluster (k means)
+```{r}
+# Load necessary libraries
+library(dplyr)
+
+# Assuming kmeansFIT_1 contains the clustering result with optimal k (e.g., 2)
+# and data_matrix contains the original numeric data without the sentiment column
+
+# Get the cluster centers from the K-means result
+centers <- kmeansFIT_1$centers
+
+# Convert centers to a data frame for easier manipulation
+centers_df <- as.data.frame(centers)
+
+# Get the column names from the original data to identify words
+word_names <- colnames(data_matrix)
+
+# Function to get top words in each cluster center
+get_top_words <- function(center, word_names, n = 10) {
+  # Convert the cluster center (row) to a named numeric vector
+  sorted_words <- sort(as.numeric(center), decreasing = TRUE)
+  top_words <- head(sorted_words, n)
+  # Get the word names corresponding to the top words
+  top_word_names <- word_names[order(-as.numeric(center))][1:n]
+  return(data.frame(Word = top_word_names, Value = top_words))
+}
+
+# Loop through each cluster center and find the top words
+for (i in 1:nrow(centers_df)) {
+  cat("\nTop words in Cluster", i, ":\n")
+  print(get_top_words(centers_df[i, ], word_names, 10))
+}
+```
+
+Hierarchical clustering 
+```{r}
+distMatrix_C <- dist(data_matrix, method = "cosine")
+print("Cosine similarity distance matrix:")
+print(distMatrix_C)
+
+groups_C <- hclust(distMatrix_C, method = "ward.D")
+
+plot(groups_C, cex = 0.7, hang = -30, main = "Cosine Similarity (Hierarchical Clustering)")
+rect.hclust(groups_C, k = 2) 
+
+library(networkD3)
+radialNetwork(as.radialNetwork(groups_C))
+
+dendroNetwork(groups_C)
+
+fviz_nbclust(data_matrix, hcut, method = "silhouette") +
+  ggtitle("Silhouette Method for Optimal K")
+
+```
+
